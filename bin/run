@@ -1,0 +1,16 @@
+#!/bin/bash
+
+self=$(readlink -f "$0")
+module_bin_path=$(dirname "$self")
+module_path=$(dirname "$module_bin_path")
+rtt_path=$(dirname "$module_path")
+module=$(basename "$module_path")
+self=$(basename "$self")
+shlib_path=$rtt_path/misc/
+
+source "$shlib_path/common.sh"
+
+# nothing to do
+
+cd $module_path
+$module_path/example 127.0.0.1

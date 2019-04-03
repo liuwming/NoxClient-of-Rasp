@@ -5,6 +5,7 @@
 #include <QThread>
 #include <QTextCursor>
 #include <QTimerEvent>
+#include "./nox/noxClient.h"
 
 namespace Ui {
 class MainWindow;
@@ -24,6 +25,8 @@ signals:
 
 private slots:
     void onShowInfo(QString);
+    void onShowResInfo(mapResInfo);
+
     void on_pushButtonMac_clicked();
     void on_pushButtonModel_clicked();
     void on_pushButtonClose_clicked();

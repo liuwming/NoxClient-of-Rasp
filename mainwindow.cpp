@@ -1,6 +1,5 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "./nox/noxClient.h"
 
 #include <QDebug>
 #include <QMessageBox>
@@ -22,8 +21,11 @@ MainWindow::MainWindow(QWidget *parent) :
     QThread *pThread = new QThread();
     pNox->moveToThread(pThread);
 
+    qRegisterMetaType<mapResInfo>("mapResInfo");
+
     connect(pThread, SIGNAL(started()), pNox, SLOT(beginToWork()));
     connect(pNox, SIGNAL(sendInfo(QString)), this, SLOT(onShowInfo(QString)));
+    connect(pNox, SIGNAL(sendResInfo(mapResInfo)), this, SLOT(onShowResInfo(mapResInfo)));
     connect(this, SIGNAL(sig_cmd(int, QString)), pNox, SLOT(onRecvCmd(int, QString)));
     pThread->start();
 
@@ -35,11 +37,77 @@ MainWindow::MainWindow(QWidget *parent) :
     isModelTest = false;
     isReceiving = false;
 
+    ui->tableWidget->setColumnCount(13);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode( QHeaderView::Stretch);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(9, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(10, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(11, QHeaderView::ResizeToContents);
+    // ui->tableWidget->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch); //自适应行高
+
+    QStringList header;
+    header << "MAC地址" << "Model号" << "固件版本" << "老化开始" << "老化完成" << "平均信号强度" << "最小信号强度"
+           << "最大信号强度" << "发包个数" << "收包个数" <<"设备状态" << "IP地址" <<  "是否合格";
+    ui->tableWidget->setHorizontalHeaderLabels(header);
+    ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);//禁止修改
+    // ui->tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows); // 整行选中的方式
+    // ui->tableWidget->setSelectionMode(QAbstractItemView::SingleSelection); // 可以选中单个
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+
+void MainWindow::onShowResInfo(mapResInfo mapInfo)
+{
+    if (mapInfo.isEmpty()) {
+        return;
+    }
+
+    ui->tableWidget->setRowCount(0);
+    ui->tableWidget->clearContents();
+
+    QStringList  strlist;
+    mapResInfo::const_iterator it;
+    for (it = mapInfo.constBegin(); it != mapInfo.constEnd(); ++it) {
+        qDebug() << it.key() << ":" << it.value();
+
+        strlist = it.value();
+        if (strlist.size() < 2) {
+            continue;
+        }
+
+        int iTmp = ui->tableWidget->rowCount();
+        ui->tableWidget->insertRow(iTmp);//增加一行
+        for (int i = 0; i < strlist.size(); i++) {
+            ui->tableWidget->setItem(iTmp, 0, new QTableWidgetItem(it.key()));
+
+            if (strlist.last() == "fail") {
+                QTableWidgetItem *item = new QTableWidgetItem("不合格");
+                item->setBackgroundColor(Qt::red);
+                item->setTextColor(Qt::white);
+                item->setFont(QFont( "Times", 12, QFont::Bold));
+                ui->tableWidget->setItem(iTmp, 12, item);
+                ui->tableWidget->item(iTmp, 12)->setTextAlignment(Qt::AlignCenter);
+                strlist.removeLast();
+            }
+            if (strlist.last() == "success") {
+                QTableWidgetItem *itemS = new QTableWidgetItem("合格");
+                itemS->setBackgroundColor(Qt::darkGreen);
+                itemS->setTextColor(Qt::white);
+                itemS->setFont( QFont("Times", 12, QFont::Bold));
+                ui->tableWidget->setItem(iTmp, 12, itemS);
+                ui->tableWidget->item(iTmp, 12)->setTextAlignment(Qt::AlignCenter);
+                strlist.removeLast();
+            }
+
+            ui->tableWidget->setItem(iTmp, i + 1, new QTableWidgetItem(strlist.value(i)));
+        }
+    }
+
 }
 
 void MainWindow::onShowInfo(QString str)
@@ -63,9 +131,15 @@ void MainWindow::onShowInfo(QString str)
     } else if (str.contains("waiting on")) {
         isReceiving = true;
         return;
+    } else if (str.contains("Failed to")) {
+        ui->pushButtonStartModel->setText("启动MODEL测试");
+        ui->pushButtonStartModel->setEnabled(true);
+        isWifiTest = false;
+        ui->pushButtonStartWifi->setText("启动WIFI测试");
+        isModelTest = false;
+        ui->pushButtonStartWifi->setEnabled(true);
     }
 
-    // ui->textEdit->setTextColor(QColor("royalblue"));
     ui->textEdit->append(str);
     m_cursor.movePosition(QTextCursor::End);
     ui->textEdit->setTextCursor(m_cursor);
@@ -108,6 +182,8 @@ void MainWindow::on_pushButtonClose_clicked()
 void MainWindow::on_pushButtonStartWifi_clicked()
 {
     ui->pushButtonStartWifi->setText("WIFI测试中...");
+    ui->tableWidget->setRowCount(0);
+    ui->tableWidget->clearContents();
     ui->textEdit->setTextColor("");
     isWifiTest = true;
     ui->pushButtonStartWifi->setDisabled(true);
@@ -118,6 +194,8 @@ void MainWindow::on_pushButtonStartWifi_clicked()
 void MainWindow::on_pushButtonStartModel_clicked()
 {
     ui->pushButtonStartModel->setText("MODEL测试中...");
+    ui->tableWidget->setRowCount(0);
+    ui->tableWidget->clearContents();
     ui->textEdit->setTextColor("");
     isModelTest = true;
     ui->pushButtonStartModel->setDisabled(true);
@@ -161,7 +239,7 @@ void MainWindow::timerEvent(QTimerEvent *event)
             qDebug() << "isReceiving : " << iNum;;
             if (iNum > 25) {
 
-                if (1 == QMessageBox::warning(this, tr("提示"), tr("服务器响应超时，请重新测试!!!"), tr("否"), tr("是"))) {
+                if (1 == QMessageBox::warning(this, tr("提示"), tr("服务器响应超时，请重新测试!!!"), tr("取消"), tr("确定"))) {
                     this->deleteLater();
                 }
             }

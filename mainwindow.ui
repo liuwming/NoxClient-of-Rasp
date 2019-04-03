@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>923</width>
+    <width>1009</width>
     <height>570</height>
    </rect>
   </property>
@@ -32,31 +32,6 @@
           <height>130</height>
          </size>
         </property>
-        <row>
-         <property name="text">
-          <string>New Row</string>
-         </property>
-        </row>
-        <row>
-         <property name="text">
-          <string>New Row</string>
-         </property>
-        </row>
-        <row>
-         <property name="text">
-          <string>New Row</string>
-         </property>
-        </row>
-        <column>
-         <property name="text">
-          <string>New Column</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>New Column</string>
-         </property>
-        </column>
        </widget>
       </item>
      </layout>
@@ -152,7 +127,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>923</width>
+     <width>1009</width>
      <height>19</height>
     </rect>
    </property>

@@ -3,6 +3,7 @@
 
 #include "../lib/rtt_interface.h"
 #include <QThread>
+#include <QMap>
 
 #define CLNT_VERION            "1.5"
 #define RSSI_THRESH_AVG        -50
@@ -22,6 +23,7 @@ typedef struct {
     char model[32];
 } prod_name_model;
 
+typedef QMap<QString, QStringList> mapResInfo;
 
 enum TEST_TYPE {
     TEST_TYPE_WIFI  = 1,
@@ -47,6 +49,7 @@ public:
     ~NoxClient();
 signals:
     void sendInfo(QString);
+    void sendResInfo(mapResInfo);
 
 private slots:
     void onRecvCmd(int cmd, QString strInfo);

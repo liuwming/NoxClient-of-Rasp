@@ -9,13 +9,15 @@
 #include <QThread>
 
 #include "noxClient.h"
+//#include <QStandardPaths>
+#include <QCoreApplication>
 
 static int iModelCounter = 0;
 static int iWifiCounter = 0;
 static rt_cmd_result_t final_res;
 // static rt_cmd_result_t *result = &final_res;
-static char *log_file = "rssi_test.log";
-static char *log_file_model_test = "model_test.log";
+static char log_file[100] ; //= "rssi_test.log";
+static char log_file_model_test[100];// = "model_test.log";
 
 int g_test_type = TEST_TYPE_WIFI;
 
@@ -43,7 +45,23 @@ char cmd_name[][50] = {
 
 NoxClient::NoxClient(char *pIp) : QObject()
 {
-    m_pIP = pIp;
+   m_pIP = pIp;
+   //m_strDesktopDir = QStandardPaths::standardLocations(QStandardPaths::DesktopLocation).first();
+
+   QString strDirPath =  QCoreApplication::applicationDirPath();
+   m_strDesktopDir  = strDirPath.left( strDirPath.size() - 3) + "output/";
+   //qDebug() << "dir:: " << m_strDesktopDir;
+   char *ch;
+   QByteArray ba = m_strDesktopDir.toLatin1();
+   ch = ba.data();
+   char *str1 = "rssi_test.log";
+   char *str2 = "model_test.log";
+   sprintf(log_file, "%s%s", ch, str1);
+   sprintf(log_file_model_test, "%s%s", ch, str2);
+
+   qDebug() << "wifi  dir:: " << log_file;
+   qDebug() << "model dir:: " << log_file_model_test;
+
 }
 
 NoxClient::~NoxClient()
@@ -120,11 +138,12 @@ static char target_model[32];
 
 int NoxClient::set_beacon(QString strMac)
 {
-    char cmd[128];
-    char buf[32];
+    char cmd[128] = {0};
+    char buf[32] = {0};
 
     // scanf("%s", buf);
     memcpy(buf, strMac.toLocal8Bit(), strMac.size());
+    qDebug() << buf;
     if (!valid_mac(buf)) {
         return -1;
     }
@@ -136,9 +155,9 @@ int NoxClient::set_beacon(QString strMac)
     }
     strcpy(beacon_key, buf);
 
-    sprintf(cmd, "echo %s > "beacon_info_fn, beacon_mac);
+    sprintf(cmd, "echo %s > " beacon_info_fn, beacon_mac);
     system(cmd);
-    sprintf(cmd, "echo %s >> "beacon_info_fn, beacon_key);
+    sprintf(cmd, "echo %s >> " beacon_info_fn, beacon_key);
     system(cmd);
 
     return 0;
@@ -146,8 +165,8 @@ int NoxClient::set_beacon(QString strMac)
 
 int NoxClient::set_target_model(QString strModel)
 {
-    char cmd[128];
-    char buf[32];
+    char cmd[128] = {0};
+    char buf[32] = {0};
     int i_len = strModel.size();
 
     memcpy(buf, strModel.toLocal8Bit(), i_len);
@@ -158,7 +177,7 @@ int NoxClient::set_target_model(QString strModel)
     strcpy(target_model, buf);
     target_model[i_len] = '\0';
 
-    sprintf(cmd, "echo %s > "model_info_fn, target_model);
+    sprintf(cmd, "echo %s > " model_info_fn, target_model);
     system(cmd);
 
     return 0;
@@ -255,6 +274,7 @@ void NoxClient::print_test_status(rtt_handle_t hdl, rt_cmd_result_t* result)
     //l += sprintf(buf + l, "-model-firmware_ver-brs-brf-avg_rssi-min_rssi-max_rssi-packet_send-packet_recv\n");
     for (i = 0; i < (int)result->dev_count; i++) {
         //l += sprintf(buf + l, "+Device: Status[%s] MAC[%s] IP[%s]\n", res(state), res(mac), res(ip));
+        strlist.clear();
         if (result->type == RT_CMD_RESULT) {
             pass = 1;
 
@@ -289,12 +309,29 @@ void NoxClient::print_test_status(rtt_handle_t hdl, rt_cmd_result_t* result)
                 sendInfo(QString().sprintf("测试结果[%s],设备状态[%s] MAC[%s] IP[%s]", "成功", res(state), res(mac), res(ip)));
                 passed_dev[i] = 1;
                 add_beacon = 1;
+
+                strlist << res(model) << res(fw_ver) << QString::number(res(brs)) << QString::number(res(brf))
+                        << QString::number(res(avg_rssi)) << QString::number(res(min_rssi)) << QString::number(res(max_rssi))
+                        << QString::number(res(packet_send)) << QString::number(res(packet_recv)) << res(state) << res(ip);
+
+                strlist.append("success");
+                mapInfo.insert(res(mac), strlist);
+                sendResInfo(mapInfo); // to do
+                continue; // TO DO
             } else {
                 sendInfo(QString("测试失败\n"));
                 l += sprintf(buf + l, "测试结果[%s],设备状态[%s] MAC[%s] IP[%s]\n", "失败", res(state), res(mac), res(ip));
                 sendInfo(QString().sprintf("测试结果[%s],设备状态[%s] MAC[%s] IP[%s]", "失败", res(state), res(mac), res(ip)));
                 passed_dev[i] = 0;
 
+                strlist << res(model) << res(fw_ver) << QString::number(res(brs)) << QString::number(res(brf))
+                        << QString::number(res(avg_rssi)) << QString::number(res(min_rssi)) << QString::number(res(max_rssi))
+                        << QString::number(res(packet_send)) << QString::number(res(packet_recv)) << res(state) << res(ip);
+
+                strlist.append("fail");
+                mapInfo.insert(res(mac), strlist);
+                sendResInfo(mapInfo); // to do
+                continue; // TO DO
                 control_dev(hdl, result->body.status[i].mac, 1); // to do
             }
         }
@@ -315,21 +352,18 @@ void NoxClient::print_test_status(rtt_handle_t hdl, rt_cmd_result_t* result)
                     << QString::number(res(packet_send)) << QString::number(res(packet_recv)) << res(state) << res(ip);
         }
         l += sprintf(buf + l, "\n");
-
-        if (result->type == RT_CMD_RESULT) {
-            strlist.append(pass == 1 ? "success" : "fail");
-        }
         mapInfo.insert(res(mac), strlist);
+
+        if (result->type != RT_CMD_RESULT) {
+            sendResInfo(mapInfo);
+        }
     }
 
     if (result->type != RT_CMD_STATUS) {
         l += sprintf(buf + l, "%s\n", "----------------------------------------------------------------------------------");
     }
 
-    sendResInfo(mapInfo); // to do
-
     sendInfo(QString().sprintf("%s", buf));
-
 
 #ifdef LOG_RESULT
     if (result->type == RT_CMD_RESULT) {
@@ -350,6 +384,7 @@ void NoxClient::print_test_status(rtt_handle_t hdl, rt_cmd_result_t* result)
                 strcpy(beacon_cmd.mac_beacon, beacon_mac);
                 strcpy(beacon_cmd.key, beacon_key);
                 control_dev(hdl, (char *)&beacon_cmd, 3);
+
                 //strcpy(beacon_cmd.mac_beacon, "F8:24:41:D0:7F:27");//第二个
                 //control_dev(hdl, &beacon_cmd, 3);
                 //strcpy(beacon_cmd.mac_beacon, "F8:24:41:D0:7F:28");//第三个
@@ -391,6 +426,7 @@ void NoxClient::print_test_modle_status(rtt_handle_t hdl, rt_cmd_result_t* resul
     //l += sprintf(buf + l, "-model-firmware_ver-brs-brf-avg_rssi-min_rssi-max_rssi-packet_send-packet_recv\n");
     for (i = 0; i < (int)result->dev_count; i++) {
         //l += sprintf(buf + l, "+Device: Status[%s] MAC[%s] IP[%s]\n", res(state), res(mac), res(ip));
+        strlist.clear();
         if (result->type == RT_CMD_RESULT) {
             pass = 0;
 
@@ -399,17 +435,23 @@ void NoxClient::print_test_modle_status(rtt_handle_t hdl, rt_cmd_result_t* resul
             }
 
             if (pass) {
-                control_dev(hdl, result->body.status[i].mac, 1);
                 l += sprintf(buf + l, "[%s]------MAC[%s] model[%s]\n", "成功",res(mac),res(model));
                 sendInfo(QString().sprintf("[%s]------MAC[%s] model[%s]", "成功",res(mac),res(model)));
                 passed_dev[i] = 1;
                 strlist << res(model) << "success";
-            } else {
+                mapInfo.insert(res(mac), strlist);
+                sendResInfo(mapInfo);
+                continue;  // to do
                 control_dev(hdl, result->body.status[i].mac, 1);
+            } else {
                 l += sprintf(buf + l, "[%s]------MAC[%s] model[%s] 设备状态[%s] \n", "失败", res(mac), res(model), res(state));
                 sendInfo(QString().sprintf("[%s]------MAC[%s] model[%s] 设备状态[%s]", "失败", res(mac), res(model), res(state)));
                 passed_dev[i] = 0;
                 strlist << res(model) << "fail";
+                mapInfo.insert(res(mac), strlist);
+                sendResInfo(mapInfo);
+                continue;  // to do
+                control_dev(hdl, result->body.status[i].mac, 1);
             }
 
         } else {
@@ -431,11 +473,10 @@ void NoxClient::print_test_modle_status(rtt_handle_t hdl, rt_cmd_result_t* resul
 
             l += sprintf(buf + l, "\n");
 
+            mapInfo.insert(res(mac), strlist);
+            sendResInfo(mapInfo); // to do
         }
-        mapInfo.insert(res(mac), strlist);
     }
-
-    sendResInfo(mapInfo); // to do
 
     switch ((int)result->type){
     case RT_CMD_STATUS:
@@ -446,7 +487,6 @@ void NoxClient::print_test_modle_status(rtt_handle_t hdl, rt_cmd_result_t* resul
     }
 
     sendInfo(QString().sprintf("%s\n", buf));
-
 
 #ifdef LOG_RESULT
     if (result->type == RT_CMD_RESULT) {
@@ -459,7 +499,6 @@ void NoxClient::print_test_modle_status(rtt_handle_t hdl, rt_cmd_result_t* resul
         fclose(fp);
     }
 #endif
-
 }
 
 void NoxClient::test_stop(rtt_handle_t hdl)

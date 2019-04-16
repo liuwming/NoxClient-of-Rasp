@@ -15,7 +15,7 @@ MainWindow::MainWindow(QWidget *parent) :
         ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    this->setWindowTitle("Factory Test Tool for NOX of Yeelight");
+    this->setWindowTitle("NOX Client Of Yeelight");
 
     NoxClient *pNox = new NoxClient("127.0.0.1");
     QThread *pThread = new QThread();
@@ -38,18 +38,15 @@ MainWindow::MainWindow(QWidget *parent) :
     isReceiving = false;
 
     ui->tableWidget->setColumnCount(13);
-    ui->tableWidget->horizontalHeader()->setSectionResizeMode( QHeaderView::Stretch);
-    ui->tableWidget->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    ui->tableWidget->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    ui->tableWidget->horizontalHeader()->setSectionResizeMode(9, QHeaderView::ResizeToContents);
-    ui->tableWidget->horizontalHeader()->setSectionResizeMode(10, QHeaderView::ResizeToContents);
-    ui->tableWidget->horizontalHeader()->setSectionResizeMode(11, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     // ui->tableWidget->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch); //自适应行高
 
     QStringList header;
     header << "MAC地址" << "Model号" << "固件版本" << "老化开始" << "老化完成" << "平均信号强度" << "最小信号强度"
            << "最大信号强度" << "发包个数" << "收包个数" <<"设备状态" << "IP地址" <<  "是否合格";
     ui->tableWidget->setHorizontalHeaderLabels(header);
+    //ui->tableWidget->horizontalHeader()->setStyleSheet("QHeaderView::section{font:13px}");
+
     ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);//禁止修改
     // ui->tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows); // 整行选中的方式
     // ui->tableWidget->setSelectionMode(QAbstractItemView::SingleSelection); // 可以选中单个
@@ -60,12 +57,20 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-
 void MainWindow::onShowResInfo(mapResInfo mapInfo)
 {
     if (mapInfo.isEmpty()) {
         return;
     }
+
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(5, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(6, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(7, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(9, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(10, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(11, QHeaderView::ResizeToContents);
 
     ui->tableWidget->setRowCount(0);
     ui->tableWidget->clearContents();
@@ -82,30 +87,63 @@ void MainWindow::onShowResInfo(mapResInfo mapInfo)
 
         int iTmp = ui->tableWidget->rowCount();
         ui->tableWidget->insertRow(iTmp);//增加一行
-        for (int i = 0; i < strlist.size(); i++) {
-            ui->tableWidget->setItem(iTmp, 0, new QTableWidgetItem(it.key()));
 
-            if (strlist.last() == "fail") {
-                QTableWidgetItem *item = new QTableWidgetItem("不合格");
+        if (strlist.last() == "fail") {
+            QTableWidgetItem *item = new QTableWidgetItem("不合格");
+            item->setBackgroundColor(Qt::red);
+            item->setTextColor(Qt::white);
+            item->setFont(QFont("Times", 12, QFont::Bold));
+            ui->tableWidget->setItem(iTmp, 12, item);
+            ui->tableWidget->item(iTmp, 12)->setTextAlignment(Qt::AlignCenter);
+            strlist.removeLast();
+
+            QTableWidgetItem *itemMac = new QTableWidgetItem(it.key());
+            itemMac->setBackgroundColor(Qt::red);
+            itemMac->setTextColor(Qt::white);
+            itemMac->setFont(QFont("Times", 12, QFont::Bold));
+            ui->tableWidget->setItem(iTmp, 0, itemMac);
+
+            for (int i = 0; i < strlist.size(); i++) {
+                QTableWidgetItem *item = new QTableWidgetItem(strlist.value(i));
                 item->setBackgroundColor(Qt::red);
                 item->setTextColor(Qt::white);
-                item->setFont(QFont( "Times", 12, QFont::Bold));
-                ui->tableWidget->setItem(iTmp, 12, item);
-                ui->tableWidget->item(iTmp, 12)->setTextAlignment(Qt::AlignCenter);
-                strlist.removeLast();
-            }
-            if (strlist.last() == "success") {
-                QTableWidgetItem *itemS = new QTableWidgetItem("合格");
-                itemS->setBackgroundColor(Qt::darkGreen);
-                itemS->setTextColor(Qt::white);
-                itemS->setFont( QFont("Times", 12, QFont::Bold));
-                ui->tableWidget->setItem(iTmp, 12, itemS);
-                ui->tableWidget->item(iTmp, 12)->setTextAlignment(Qt::AlignCenter);
-                strlist.removeLast();
+                item->setFont(QFont("Times", 12, QFont::Bold));
+                ui->tableWidget->setItem(iTmp, i + 1, item);
             }
 
+            continue;
+        } else if (strlist.last() == "success") {
+            QTableWidgetItem *itemS = new QTableWidgetItem("合格");
+            itemS->setBackgroundColor(Qt::darkGreen);
+            itemS->setTextColor(Qt::white);
+            itemS->setFont(QFont("Times", 13, QFont::Bold));
+            ui->tableWidget->setItem(iTmp, 12, itemS);
+            ui->tableWidget->item(iTmp, 12)->setTextAlignment(Qt::AlignCenter);
+
+            strlist.removeLast();
+
+            QTableWidgetItem *itemMac = new QTableWidgetItem(it.key());
+            itemMac->setBackgroundColor(Qt::darkGreen);
+            itemMac->setTextColor(Qt::white);
+            itemMac->setFont(QFont("Times", 13, QFont::Bold));
+            ui->tableWidget->setItem(iTmp, 0, itemMac);
+
+            for (int i = 0; i < strlist.size(); i++) {
+                QTableWidgetItem *item = new QTableWidgetItem(strlist.value(i));
+                item->setBackgroundColor(Qt::darkGreen);
+                item->setTextColor(Qt::white);
+                item->setFont(QFont("Times", 13, QFont::Bold));
+                ui->tableWidget->setItem(iTmp, i + 1, item);
+            }
+            continue;
+
+        }
+
+        for (int i = 0; i < strlist.size(); i++) {
+            ui->tableWidget->setItem(iTmp, 0, new QTableWidgetItem(it.key()));
             ui->tableWidget->setItem(iTmp, i + 1, new QTableWidgetItem(strlist.value(i)));
         }
+
     }
 
 }
@@ -118,7 +156,7 @@ void MainWindow::onShowInfo(QString str)
         ui->pushButtonStartWifi->setStyleSheet("");
         ui->pushButtonStartWifi->setEnabled(true);
         ui->pushButtonStartModel->setEnabled(true);
-        ui->textEdit->setTextColor(QColor("red"));
+        ui->textEdit->setTextColor(QColor("blue"));
         return;
     } else if ("2" == str) {
         isModelTest = false;
@@ -137,6 +175,7 @@ void MainWindow::onShowInfo(QString str)
         isWifiTest = false;
         ui->pushButtonStartWifi->setText("启动WIFI测试");
         isModelTest = false;
+        ui->textEdit->setTextColor(QColor("red"));
         ui->pushButtonStartWifi->setEnabled(true);
     }
 

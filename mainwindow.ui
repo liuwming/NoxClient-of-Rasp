@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1009</width>
-    <height>570</height>
+    <width>1254</width>
+    <height>765</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,7 +16,10 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="0" column="0">
-     <layout class="QVBoxLayout" name="verticalLayout" stretch="6,0">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="5,3">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetFixedSize</enum>
+      </property>
       <item>
        <widget class="QTextEdit" name="textEdit">
         <property name="placeholderText">
@@ -26,10 +29,16 @@
       </item>
       <item>
        <widget class="QTableWidget" name="tableWidget">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>120</height>
+         </size>
+        </property>
         <property name="maximumSize">
          <size>
           <width>16777215</width>
-          <height>130</height>
+          <height>1666666</height>
          </size>
         </property>
        </widget>
@@ -81,6 +90,12 @@
       </item>
       <item row="1" column="2">
        <widget class="QPushButton" name="pushButtonModel">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>0</height>
+         </size>
+        </property>
         <property name="text">
          <string>设置model号</string>
         </property>
@@ -127,7 +142,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1009</width>
+     <width>1254</width>
      <height>19</height>
     </rect>
    </property>

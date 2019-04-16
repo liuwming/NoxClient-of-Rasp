@@ -75,6 +75,7 @@ private:
 
     QThread *m_show_thread;
     char *m_pIP;
+    QString m_strDesktopDir;
 
 };
 

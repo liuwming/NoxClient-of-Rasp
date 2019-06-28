@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="0" column="0">
-     <layout class="QVBoxLayout" name="verticalLayout" stretch="5,3">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="4,5">
       <property name="sizeConstraint">
        <enum>QLayout::SetFixedSize</enum>
       </property>
@@ -32,7 +32,7 @@
         <property name="minimumSize">
          <size>
           <width>0</width>
-          <height>120</height>
+          <height>160</height>
          </size>
         </property>
         <property name="maximumSize">
@@ -48,13 +48,37 @@
     <item row="1" column="0">
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
-       <widget class="QLabel" name="label">
+       <widget class="QLabel" name="label_3">
         <property name="text">
          <string>请输入:</string>
         </property>
        </widget>
       </item>
       <item row="0" column="1">
+       <widget class="QLineEdit" name="lineEditSubModel">
+        <property name="autoFillBackground">
+         <bool>false</bool>
+        </property>
+        <property name="placeholderText">
+         <string>设置SubModel (0~999)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="pushButtonSubModel">
+        <property name="text">
+         <string>设置SubModel</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>请输入:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
        <widget class="QLineEdit" name="lineEditMac">
         <property name="autoFillBackground">
          <bool>false</bool>
@@ -64,21 +88,21 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="2">
+      <item row="1" column="2">
        <widget class="QPushButton" name="pushButtonMac">
         <property name="text">
-         <string>设置MAC地址</string>
+         <string>设置 MAC 地址</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
+      <item row="2" column="0">
        <widget class="QLabel" name="label_2">
         <property name="text">
          <string>请输入:</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="2" column="1">
        <widget class="QLineEdit" name="lineEditModel">
         <property name="autoFillBackground">
          <bool>false</bool>
@@ -88,7 +112,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="2">
+      <item row="2" column="2">
        <widget class="QPushButton" name="pushButtonModel">
         <property name="minimumSize">
          <size>
@@ -97,7 +121,7 @@
          </size>
         </property>
         <property name="text">
-         <string>设置model号</string>
+         <string>设置 model 号</string>
         </property>
        </widget>
       </item>
@@ -105,6 +129,49 @@
     </item>
     <item row="2" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QComboBox" name="comboBox">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>25</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QComboBox QAbstractItemView  
+{  
+     border: 1px solid rgb(10,161,161);  
+}  
+  
+QComboBox QAbstractItemView::item  
+{  
+    height: 60px;
+}  
+  
+QComboBox QAbstractItemView::item:selected  
+{     
+    background-color: rgba(54, 8, 180);  
+} 
+</string>
+        </property>
+        <item>
+         <property name="text">
+          <string>测试完成后   退工厂</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>测试完成后   不退工厂</string>
+         </property>
+        </item>
+       </widget>
+      </item>
       <item>
        <widget class="QPushButton" name="pushButtonStartWifi">
         <property name="text">
@@ -116,13 +183,6 @@
        <widget class="QPushButton" name="pushButtonStartModel">
         <property name="text">
          <string>启动MODEL测试</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushButtonStop">
-        <property name="text">
-         <string>停止</string>
         </property>
        </widget>
       </item>

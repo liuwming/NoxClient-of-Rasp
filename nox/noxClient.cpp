@@ -7,10 +7,10 @@
 #include <QTime>
 #include <sys/stat.h>
 #include <QThread>
+#include <QTimer>
+#include <QCoreApplication>
 
 #include "noxClient.h"
-//#include <QStandardPaths>
-#include <QCoreApplication>
 
 static int iModelCounter = 0;
 static int iWifiCounter = 0;
@@ -19,48 +19,50 @@ static rt_cmd_result_t final_res;
 static char log_file[100] ; //= "rssi_test.log";
 static char log_file_model_test[100];// = "model_test.log";
 
-int g_test_type = TEST_TYPE_WIFI;
+int  g_test_type = TEST_TYPE_WIFI;
+int  g_is_exit_factory_wifi_pass = 0;  // default 0: exit factory.   1: do not exit
+bool g_is_set_submode = false;
+int  g_submode = -1;
 
 char cmd_name[][50] = {
-    {"启动"},//0
-    {"结束"},
-    {"状态"},
-    {"结果"},
-    {"设置参数"},
-    {"获取参数"},//5
-    {"真退工厂"},
-    {"假退工厂"},
-    {"升级"},
-    {""},
-    {""},//10
-    {""},
-    {"添加遥控器"},
-    {""},
-    {""},
-    {""},//15
-    {""},
-    {""}
+        {"启动"},//0
+        {"结束"},
+        {"状态"},
+        {"结果"},
+        {"设置参数"},
+        {"获取参数"},//5
+        {"真退工厂"},
+        {"假退工厂"},
+        {"升级"},
+        {""},
+        {""},//10
+        {""},
+        {"添加遥控器"},
+        {""},
+        {""},
+        {""},//15
+        {"设置submodel"},
+        {""}
 };
-
 
 NoxClient::NoxClient(char *pIp) : QObject()
 {
-   m_pIP = pIp;
-   //m_strDesktopDir = QStandardPaths::standardLocations(QStandardPaths::DesktopLocation).first();
+    m_pIP = pIp;
+    //m_strDesktopDir = QStandardPaths::standardLocations(QStandardPaths::DesktopLocation).first();
 
-   QString strDirPath =  QCoreApplication::applicationDirPath();
-   m_strDesktopDir  = strDirPath.left( strDirPath.size() - 3) + "output/";
-   //qDebug() << "dir:: " << m_strDesktopDir;
-   char *ch;
-   QByteArray ba = m_strDesktopDir.toLatin1();
-   ch = ba.data();
-   char *str1 = "rssi_test.log";
-   char *str2 = "model_test.log";
-   sprintf(log_file, "%s%s", ch, str1);
-   sprintf(log_file_model_test, "%s%s", ch, str2);
+    QString strDirPath =  QCoreApplication::applicationDirPath();
+    m_strDesktopDir  = strDirPath.left( strDirPath.size() - 3) + "output/";
+    //qDebug() << "dir:: " << m_strDesktopDir;
+    char *ch;
+    QByteArray ba = m_strDesktopDir.toLatin1();
+    ch = ba.data();
+    char *str1 = "rssi_test.log";
+    char *str2 = "model_test.log";
+    sprintf(log_file, "%s%s", ch, str1);
+    sprintf(log_file_model_test, "%s%s", ch, str2);
 
-   qDebug() << "wifi  dir:: " << log_file;
-   qDebug() << "model dir:: " << log_file_model_test;
+    qDebug() << "wifi  dir:: " << log_file;
+    qDebug() << "model dir:: " << log_file_model_test;
 
 }
 
@@ -252,8 +254,10 @@ void NoxClient::print_test_status(rtt_handle_t hdl, rt_cmd_result_t* result)
     int l;
     char buf[4096];
     beacon_cmd_param_t beacon_cmd;
+    submodel_cmd_param_t submodel_cmd;
     int pass;
     int add_beacon = 0;
+    int set_submodel = 0;
 
     mapResInfo mapInfo;
     QStringList strlist;
@@ -300,15 +304,23 @@ void NoxClient::print_test_status(rtt_handle_t hdl, rt_cmd_result_t* result)
 
             if (pass) {
                 sendInfo(QString("测试通过"));
-#if EXIT_FACTORY_WIFI_PASS
-                control_dev(hdl, result->body.status[i].mac, 0);
-#else
-                sendInfo(QString("测试通过后不退工厂模式"));
-#endif
+                // #if EXIT_FACTORY_WIFI_PASS
+                //                control_dev(hdl, result->body.status[i].mac, 0);
+                // #else
+                //                sendInfo(QString("测试通过后不退工厂模式"));
+                // #endif
+
+                if (!g_is_exit_factory_wifi_pass) {
+                    control_dev(hdl, result->body.status[i].mac, 0);
+                } else {
+                    sendInfo(QString("\r\n测试通过后不退工厂模式"));
+                }
+
                 l += sprintf(buf + l, "测试结果[%s],设备状态[%s] MAC[%s] IP[%s]\n", "成功", res(state), res(mac), res(ip));
                 sendInfo(QString().sprintf("测试结果[%s],设备状态[%s] MAC[%s] IP[%s]", "成功", res(state), res(mac), res(ip)));
                 passed_dev[i] = 1;
                 add_beacon = 1;
+                set_submodel = 1;
 
                 strlist << res(model) << res(fw_ver) << QString::number(res(brs)) << QString::number(res(brf))
                         << QString::number(res(avg_rssi)) << QString::number(res(min_rssi)) << QString::number(res(max_rssi))
@@ -377,6 +389,18 @@ void NoxClient::print_test_status(rtt_handle_t hdl, rt_cmd_result_t* result)
     }
 #endif
 
+    if (set_submodel && g_is_set_submode && g_submode >= 0) {
+        sendInfo(QString("设置 submodel = ").append(QString::number(g_submode)));
+        for (i = 0; i < (int)result->dev_count; i++) {
+            if (passed_dev[i]) {
+                strcpy(submodel_cmd.mac_dev, result->body.status[i].mac);
+                submodel_cmd.sudmodel_val = g_submode;
+                control_dev(hdl, (char *)&submodel_cmd, 7);
+            }
+        }
+    }
+
+
     if (add_beacon) {
         for (i = 0; i < (int)result->dev_count; i++) {
             if (passed_dev[i]) {
@@ -385,10 +409,10 @@ void NoxClient::print_test_status(rtt_handle_t hdl, rt_cmd_result_t* result)
                 strcpy(beacon_cmd.key, beacon_key);
                 control_dev(hdl, (char *)&beacon_cmd, 3);
 
-                //strcpy(beacon_cmd.mac_beacon, "F8:24:41:D0:7F:27");//第二个
-                //control_dev(hdl, &beacon_cmd, 3);
-                //strcpy(beacon_cmd.mac_beacon, "F8:24:41:D0:7F:28");//第三个
-                //control_dev(hdl, &beacon_cmd, 3);
+                // strcpy(beacon_cmd.mac_beacon, "F8:24:41:D0:7F:27");//第二个
+                // control_dev(hdl, (char *)&beacon_cmd, 3);
+                // strcpy(beacon_cmd.mac_beacon, "F8:24:41:D0:7F:28");//第三个
+                // control_dev(hdl, (char *)&beacon_cmd, 3);
             }
         }
     }
@@ -419,7 +443,7 @@ void NoxClient::print_test_modle_status(rtt_handle_t hdl, rt_cmd_result_t* resul
         l += sprintf(buf + l, "%s\n\n", "----------------------------------------------------------------------------------");
         iModelCounter = 0;
 
-        sendInfo("2");
+        sendInfo("exitModle");
         sendInfo(QString().sprintf("[Model] 共测试[%d]台设备,测试结果：",(int)result->dev_count));
         break;
     }
@@ -531,6 +555,9 @@ void NoxClient::run_test(rtt_handle_t hdl)
     rt_cmd_t cmd;
     int rc;
 
+    mapResInfo mapInfo;
+    QStringList strlist;
+
     cmd.type = RT_CMD_CLOSE_SBOX;
     sendInfo(QString("close sbox SEND command"));
 
@@ -557,12 +584,42 @@ void NoxClient::run_test(rtt_handle_t hdl)
         sendInfo(QString().sprintf("Failed to exe command: %d", res.ret_code));
         return;
     }
+
     sendInfo(QString("Command Begin."));
 
     while (1) {
         rc = rtt_recv(hdl, &res, RT_CMD_MAX); /* receive all messages from daemon */
-        if (rc <= 0)
+
+        if (rc <= 0) {
             break;
+        }
+
+        mapInfo.clear();
+
+        if (res.type == RT_CMD_CLOSE_SBOX) {
+            qDebug() << "RT_CMD_CLOSE_SBOX";
+            sendInfo("exitWifi"); // to do
+            break;
+        }
+
+        if (res.type == RT_CMD_SET_SUBMODEL) {
+            rt_cmd_result_t *result = &res;
+            for (int i = 0; i < (int)result->dev_count; i++) {
+                // QString strMac(res(mac));
+                QString strModel(res(submodel));
+                qDebug() << "get_submode val: " << strModel;
+
+                if (!strModel.isEmpty()) {
+                    strlist.clear();
+                    // sendInfo(strMac + "  :  " + strModel);
+                    strlist << strModel << "submodel";
+                    mapInfo.insert(res(mac), strlist);
+                    sendResInfo(mapInfo); // to do
+                }
+            }
+            //break;
+        }
+
         if (res.type == RT_CMD_STATUS) {
             switch (g_test_type){
             case TEST_TYPE_WIFI:
@@ -590,7 +647,7 @@ void NoxClient::run_test(rtt_handle_t hdl)
                 break;
             }
             memcpy(&final_res, &res, sizeof(res));
-            break;
+            // break;
         }
     }
 }
@@ -605,11 +662,12 @@ void NoxClient::parse_result_contrl_dev(rt_cmd_result_t * res, rt_cmd_t * cmd, i
         return;
     } else {
         sendInfo(QString().sprintf("MAC[%s] 执行指令[%s]成功.", cmd->body.mac, cmd_name[cmd->type]));
-        if(cmd->type == RT_CMD_ADD_BEACON){
+        if (cmd->type == RT_CMD_ADD_BEACON) {
             sendInfo(QString().sprintf("遥控器[%s-%s]", cmd->body.beacon.mac_beacon, cmd->body.beacon.key));
+        } else if(cmd->type == RT_CMD_SET_SUBMODEL) {
+            sendInfo(QString().sprintf("设置SUB_MODEL[VAL = %d]", cmd->body.sudmodel.sudmodel_val));
         }
     }
-
 }
 
 void NoxClient::control_dev(rtt_handle_t hdl, char* body, int result)
@@ -679,23 +737,23 @@ void NoxClient::control_dev(rtt_handle_t hdl, char* body, int result)
                                        res.body.audio_res.result));
         }
         return;
+    } else if (result == 7) {   /* set submodel for get audio result */
+        cmd.type = RT_CMD_SET_SUBMODEL;
+        memcpy(&cmd.body, body, sizeof(submodel_cmd_param_t));
+        rtt_send(hdl, &cmd);
+        sendInfo(QString("waiting on the response from the server"));
+        rc = rtt_recv(hdl, &res, RT_CMD_SET_SUBMODEL);
+
     } else {
         cmd.type = RT_CMD_ADD_BEACON;
         memcpy(&cmd.body, body, sizeof(beacon_cmd_param_t));
-        //printf("%d: add beacon %s-%s for %s\r\n", cmd.type, cmd.body.beacon.mac_beacon, cmd.body.beacon.key, cmd.body.beacon.mac_dev);
-        //printf("send add beacon command\r\n");
+        // printf("%d: add beacon %s-%s for %s\r\n", cmd.type, cmd.body.beacon.mac_beacon, cmd.body.beacon.key, cmd.body.beacon.mac_dev);
+        // printf("send add beacon command\r\n");
         rtt_send(hdl, &cmd);
-        //printf("recv response...\r\n");
+        // printf("recv response...\r\n");
         sendInfo(QString("waiting on the response from the server"));
         rc = rtt_recv(hdl, &res, RT_CMD_ADD_BEACON);
     }
-
-    //if (rc < 0 || (rc > 0 && res.ret_code != RT_ERR_OK)) {
-    //    printf("Failed to exe command %d.\n", res.ret_code);
-    //    return;
-    //} else {
-    //    printf("command execute successfully.\n");
-    //}
 
     parse_result_contrl_dev(&res, &cmd, rc);
 }
@@ -759,14 +817,21 @@ void NoxClient::onRecvCmd(int cmd, QString strInfo)
         sendInfo(QString("Start MODEL TEST"));
         run_test(m_hdl);
         break;
-    case CMD_STOP_TEST:
-        sendInfo(QString("STOP TEST"));
-        //rtt_discon(m_hdl);
-        test_stop(m_hdl);
+    case CMD_SET_SUBMODEL:
+        sendInfo(QString("submodel = ").append(QString::number(strInfo.toInt())));
+        g_submode = strInfo.toInt();
+        g_is_set_submode = true;
         break;
-
     default:
         break;
     }
 
+}
+
+
+void Delay_MSec(unsigned int msec)
+{
+    QEventLoop loop;//定义一个新的事件循环
+    QTimer::singleShot(msec, &loop, SLOT(quit()));//创建单次定时器，槽函数为事件循环的退出函数
+    loop.exec();//事件循环开始执行，程序会卡在这里，直到定时时间到，本循环被退出
 }

@@ -26,14 +26,18 @@ signals:
 private slots:
     void onShowInfo(QString);
     void onShowResInfo(mapResInfo);
-
+    // void onTimeOut();
     void on_pushButtonMac_clicked();
     void on_pushButtonModel_clicked();
     void on_pushButtonClose_clicked();
     void on_pushButtonStartWifi_clicked();
     void on_pushButtonStartModel_clicked();
 
-    void on_pushButtonStop_clicked();
+    //void on_pushButtonStop_clicked();
+
+    void on_comboBox_currentIndexChanged(int index);
+
+    void on_pushButtonSubModel_clicked();
 
 private:
     Ui::MainWindow *ui;

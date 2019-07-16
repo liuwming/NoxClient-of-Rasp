@@ -7,6 +7,7 @@
 
 extern int g_is_exit_factory_wifi_pass;
 extern int g_submode;
+extern int g_version;
 int isDigitStr(QString str);
 prod_name_model data_base_model[] = {
         {"易来 皑月LED吸顶灯 480","yilai.light.ceiling1"},
@@ -160,6 +161,18 @@ void MainWindow::onShowResInfo(mapResInfo mapInfo)
                 item->setTextColor(Qt::white);
                 item->setFont(QFont("Times", 13, QFont::Bold));
                 ui->tableWidget->setItem(iTmp, i + 1, item);
+
+                if (g_version> 0) {
+                    QString strVer =  strlist.value(1);
+                    strVer.remove("\"");
+                    if (strVer.toInt() != g_version) {
+                        QTableWidgetItem *item = new QTableWidgetItem(strlist.value(1));
+                        item->setBackgroundColor(Qt::red);
+                        item->setTextColor(Qt::white);
+                        item->setFont(QFont("Times", 12, QFont::Bold));
+                        ui->tableWidget->setItem(iTmp, 2, item);
+                    }
+                }
             }
 
             if (g_submode > 0) {
@@ -169,6 +182,7 @@ void MainWindow::onShowResInfo(mapResInfo mapInfo)
                     ui->tableWidget->setItem(i, 12, preItem);
                 }
             }
+
             continue;
 
         } else if (strlist.last() == "submodel") {
@@ -218,6 +232,17 @@ void MainWindow::onShowResInfo(mapResInfo mapInfo)
             for (int i = 0; i < strlist.size(); i++) {
                 ui->tableWidget->setItem(iTmp, 0, new QTableWidgetItem(it.key()));
                 ui->tableWidget->setItem(iTmp, i + 1, new QTableWidgetItem(strlist.value(i)));
+
+                QString strVer =  strlist.value(1);
+                strVer.remove("\"");
+                if (g_version > 0 && strVer.toInt() != g_version) {
+
+                    QTableWidgetItem *item = new QTableWidgetItem(strlist.value(1));
+                    item->setBackgroundColor(Qt::red);
+                    item->setTextColor(Qt::white);
+                    item->setFont(QFont("Times", 12, QFont::Bold));
+                    ui->tableWidget->setItem(iTmp, 2, item);
+                }
             }
         }
     }
@@ -336,9 +361,6 @@ void MainWindow::on_pushButtonStartModel_clicked()
     sig_cmd(CMD_START_MODEL_TEST, "");
 }
 
-//void MainWindow::on_pushButtonStop_clicked()
-//{
-//}
 
 void MainWindow::timerEvent(QTimerEvent *event)
 {
@@ -418,4 +440,23 @@ int isDigitStr(QString str)
     } else {  // 纯数字
         return 0;
     }
+}
+
+void MainWindow::on_pushButtonVersion_clicked()
+{
+    QString StrVer = ui->lineEditVersion->text();
+
+    if (StrVer.isEmpty()) {
+        ui->textEdit->append(QString("请输入有效的版本号!"));
+        return;
+    }
+
+    if (0 == isDigitStr(StrVer) && (StrVer.toInt() <= 999 && StrVer.toInt() >= 0)) {  // digit
+        sig_cmd(CMD_VERIFY_VER, StrVer);
+        ui->lineEditVersion->setStyleSheet("font:14px;color:mediumblue");
+        ui->lineEditVersion->setDisabled(true);
+    } else {
+        ui->textEdit->append(QString("请输入有效的版本号!"));
+    }
+
 }

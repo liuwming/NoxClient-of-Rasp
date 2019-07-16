@@ -22,7 +22,9 @@ static char log_file_model_test[100];// = "model_test.log";
 int  g_test_type = TEST_TYPE_WIFI;
 int  g_is_exit_factory_wifi_pass = 0;  // default 0: exit factory.   1: do not exit
 bool g_is_set_submode = false;
+bool g_is_verify_ver = false;
 int  g_submode = -1;
+int  g_version = -1;
 
 char cmd_name[][50] = {
         {"启动"},//0
@@ -133,23 +135,57 @@ int valid_key(char * s)
     return 1;
 }
 
-static char beacon_mac[32];
+static char beacon_mac[320];
 static char beacon_key[32];
 static char target_model[32];
 
 
-int NoxClient::set_beacon(QString strMac)
-{
-    char cmd[128] = {0};
-    char buf[32] = {0};
+//int NoxClient::set_beacon(QString strMac)
+//{
+//    char cmd[128] = {0};
+//    char buf[32] = {0};
 
-    // scanf("%s", buf);
-    memcpy(buf, strMac.toLocal8Bit(), strMac.size());
-    qDebug() << buf;
-    if (!valid_mac(buf)) {
-        return -1;
+//    // scanf("%s", buf);
+//    memcpy(buf, strMac.toLocal8Bit(), strMac.size());
+//    qDebug() << buf;
+//    if (!valid_mac(buf)) {
+//        return -1;
+//    }
+//    strcpy(beacon_mac, buf);
+
+//    sprintf(buf, "202122232425262728292a2b");
+//    if (!valid_key(buf)) {
+//        return -1;
+//    }
+//    strcpy(beacon_key, buf);
+
+//    sprintf(cmd, "echo %s > " beacon_info_fn, beacon_mac);
+//    system(cmd);
+//    sprintf(cmd, "echo %s >> " beacon_info_fn, beacon_key);
+//    system(cmd);
+
+//    return 0;
+//}
+
+int NoxClient::set_beacon(QString strInfo)
+{
+    char cmd[420] = {0};
+    char buf[320] = {0};
+    QString strMac;
+
+    QStringList macList = strInfo.split("+");
+    for (int i = 0; i < macList.size(); i++) {
+        strMac.clear();
+        strMac = macList.value(i);
+
+        memcpy(buf, strMac.toLocal8Bit(), strMac.size());
+        if (!valid_mac(buf)) {
+            return -1;
+        }
     }
-    strcpy(beacon_mac, buf);
+
+    strcpy(beacon_mac, strInfo.toLocal8Bit());
+    qDebug() << "set controler mac:" << beacon_mac;
 
     sprintf(buf, "202122232425262728292a2b");
     if (!valid_key(buf)) {
@@ -188,7 +224,8 @@ int NoxClient::set_target_model(QString strModel)
 int NoxClient::load_beacon()
 {
     FILE *fp;
-    char buf[64];
+    char buf[320];
+    char tmp[32];
 
     fp = fopen(beacon_info_fn, "r");
     if (!fp) {
@@ -197,12 +234,22 @@ int NoxClient::load_beacon()
     }
 
     fscanf(fp, "%s", buf);
-    if (!valid_mac(buf)) {
-        sendInfo(QString().sprintf("遥控器配置文件包含非法MAC地址 %s", buf));
-        goto err;
-    }
-    strcpy(beacon_mac, buf);
+    QString strInfo(buf);
+    QString strMac;
 
+    QStringList macList = strInfo.split("+");
+    for (int i = 0; i < macList.size(); i++) {
+        strMac.clear();
+        strMac = macList.value(i);
+        strcpy(tmp, strMac.toLocal8Bit());
+
+        if (!valid_mac(tmp)) {
+            sendInfo(QString().sprintf("遥控器配置文件包含非法MAC地址 %s", buf));
+            goto err;
+        }
+    }
+
+    strcpy(beacon_mac, buf);
     fscanf(fp, "%s", buf);
     if (!valid_key(buf)) {
         sendInfo(QString().sprintf("遥控器配置文件包含非法key %s", buf));
@@ -402,12 +449,18 @@ void NoxClient::print_test_status(rtt_handle_t hdl, rt_cmd_result_t* result)
 
 
     if (add_beacon) {
+        QString strInfo(beacon_mac);
+        QStringList macList = strInfo.split("+");
         for (i = 0; i < (int)result->dev_count; i++) {
             if (passed_dev[i]) {
                 strcpy(beacon_cmd.mac_dev, result->body.status[i].mac);
-                strcpy(beacon_cmd.mac_beacon, beacon_mac);
                 strcpy(beacon_cmd.key, beacon_key);
-                control_dev(hdl, (char *)&beacon_cmd, 3);
+
+                for (int i = 0; i < macList.size(); i++) {
+                    QString strMac = macList.value(i);
+                    strcpy(beacon_cmd.mac_beacon, strMac.toLocal8Bit());
+                    control_dev(hdl, (char *)&beacon_cmd, 3);
+                }
 
                 // strcpy(beacon_cmd.mac_beacon, "F8:24:41:D0:7F:27");//第二个
                 // control_dev(hdl, (char *)&beacon_cmd, 3);
@@ -775,6 +828,10 @@ void NoxClient::beginToWork()
         sendInfo(QString("未发现model信息，如model测试需手动输入"));
     }
 
+    QString strInfo(beacon_mac);
+    QStringList macList = strInfo.split("+");
+    qDebug() << "load controler mac::" << macList;
+
     setbuf(stdout, NULL);
 
     m_hdl = rtt_connect(5, &err, RTT_PROTO_UDP, m_pIP);
@@ -792,13 +849,13 @@ void NoxClient::onRecvCmd(int cmd, QString strInfo)
     qDebug() << "cmd:" << cmd;
     switch (cmd) {
     case CMD_SET_MAC:
-
+    {
         if (-1 ==  set_beacon(strInfo)) {
             sendInfo(QString("MAC地址格式不正确"));
         } else {
-            sendInfo(QString("MAC设置成功"));
+            sendInfo(QString("MAC设置成功: ").append(strInfo));
         }
-        break;
+    } break;
     case CMD_SET_MODEL:
 
         if (-1 == set_target_model(strInfo)) {
@@ -821,6 +878,12 @@ void NoxClient::onRecvCmd(int cmd, QString strInfo)
         sendInfo(QString("submodel = ").append(QString::number(strInfo.toInt())));
         g_submode = strInfo.toInt();
         g_is_set_submode = true;
+        break;
+    case CMD_VERIFY_VER:
+        sendInfo(QString("Version = ").append(QString::number(strInfo.toInt())));
+        g_version = strInfo.toInt();
+        g_is_verify_ver = true;
+
         break;
     default:
         break;

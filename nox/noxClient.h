@@ -5,7 +5,7 @@
 #include <QThread>
 #include <QMap>
 
-#define CLNT_VERION            "1.6"
+#define CLNT_VERION            "1.7"
 #define RSSI_THRESH_AVG        -50
 #define RSSI_THRESH_MIN        -65
 #define PACKAGE_LOSS_THRESH     75
@@ -37,6 +37,7 @@ enum CMD_TYPE {
     CMD_START_WIFI_TEST = 3,
     CMD_START_MODEL_TEST = 4,
     CMD_SET_SUBMODEL = 5,
+    CMD_VERIFY_VER = 6,
     CMD_EXIT_TEST
 };
 

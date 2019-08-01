@@ -32,11 +32,8 @@ private slots:
     void on_pushButtonClose_clicked();
     void on_pushButtonStartWifi_clicked();
     void on_pushButtonStartModel_clicked();
-
     void on_comboBox_currentIndexChanged(int index);
-
     void on_pushButtonSubModel_clicked();
-
     void on_pushButtonVersion_clicked();
 
 private:

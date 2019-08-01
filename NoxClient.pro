@@ -5,6 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui
+CONFIG   += x86
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -40,9 +41,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    nox/noxClient.cpp
+    nox/noxClient.cpp \
+    ParamSet/ParamSet.cpp
 
 HEADERS  += mainwindow.h \
-    nox/noxClient.h
+    nox/noxClient.h \
+    ParamSet/ParamSet.h
 
 FORMS    += mainwindow.ui

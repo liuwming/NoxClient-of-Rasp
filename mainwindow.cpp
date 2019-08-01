@@ -1,9 +1,11 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "../ParamSet/ParamSet.h"
 
 #include <QDebug>
 #include <QMessageBox>
 #include <QTimer>
+#include <QFile>
 
 extern int g_is_exit_factory_wifi_pass;
 extern int g_submode;
@@ -33,6 +35,28 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(pNox, SIGNAL(sendResInfo(mapResInfo)), this, SLOT(onShowResInfo(mapResInfo)));
     connect(this, SIGNAL(sig_cmd(int, QString)), pNox, SLOT(onRecvCmd(int, QString)));
     pThread->start();
+
+
+    QString strDirPath =  QCoreApplication::applicationDirPath();
+    QString  strFileName = strDirPath.left( strDirPath.size() - 3) + "config/setting.ini";
+
+    /* 读配置文件 */
+    {
+        ParamSet setParam;
+        setParam.setFileName(strFileName);
+
+        QFile *pFile = new QFile(strFileName);
+        if (!pFile->exists()) {
+            setParam.initDefaultSetting();
+        }
+        delete pFile;
+        setParam.loadSetting();
+    }
+
+    qDebug() << "is_exit: " << g_is_exit_factory_wifi_pass;
+    ui->comboBox->setDisabled(true);
+    ui->comboBox->setStyleSheet("QComboBox{font:13px;color:blue;height: 50px;}" );
+    ui->comboBox->setCurrentIndex(g_is_exit_factory_wifi_pass);
 
     m_cursor = ui->textEdit->textCursor();
 
@@ -458,5 +482,4 @@ void MainWindow::on_pushButtonVersion_clicked()
     } else {
         ui->textEdit->append(QString("请输入有效的版本号!"));
     }
-
 }

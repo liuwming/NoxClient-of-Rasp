@@ -5,7 +5,7 @@
 #include <QThread>
 #include <QMap>
 
-#define CLNT_VERION            "1.7"
+#define CLNT_VERION            "1.8"
 #define RSSI_THRESH_AVG        -50
 #define RSSI_THRESH_MIN        -65
 #define PACKAGE_LOSS_THRESH     75
@@ -14,9 +14,9 @@
 #define beacon_info_fn          ".beacon_info"
 #define model_info_fn           "target_model_config"
 #define res(field) result->body.status[i].field
+extern int  g_is_exit_factory_wifi_pass;  // default 0: exit factory.   1: do not exit
 
-// #define EXIT_FACTORY_WIFI_PASS  1
-
+//#define EXIT_FACTORY_WIFI_PASS  1
 //#define LOG_RESULT
 
 typedef struct {

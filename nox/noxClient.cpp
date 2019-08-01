@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <QThread>
 #include <QTimer>
+#include <QSettings>
 #include <QCoreApplication>
 
 #include "noxClient.h"
@@ -16,8 +17,8 @@ static int iModelCounter = 0;
 static int iWifiCounter = 0;
 static rt_cmd_result_t final_res;
 // static rt_cmd_result_t *result = &final_res;
-static char log_file[100] ; //= "rssi_test.log";
-static char log_file_model_test[100];// = "model_test.log";
+static char log_file[100] ;              // = "rssi_test.log";
+static char log_file_model_test[100];    // = "model_test.log";
 
 int  g_test_type = TEST_TYPE_WIFI;
 int  g_is_exit_factory_wifi_pass = 0;  // default 0: exit factory.   1: do not exit
@@ -47,6 +48,8 @@ char cmd_name[][50] = {
         {""}
 };
 
+int loadSetting(QString strFileName);
+
 NoxClient::NoxClient(char *pIp) : QObject()
 {
     m_pIP = pIp;
@@ -54,6 +57,7 @@ NoxClient::NoxClient(char *pIp) : QObject()
 
     QString strDirPath =  QCoreApplication::applicationDirPath();
     m_strDesktopDir  = strDirPath.left( strDirPath.size() - 3) + "output/";
+
     //qDebug() << "dir:: " << m_strDesktopDir;
     char *ch;
     QByteArray ba = m_strDesktopDir.toLatin1();
@@ -65,6 +69,7 @@ NoxClient::NoxClient(char *pIp) : QObject()
 
     qDebug() << "wifi  dir:: " << log_file;
     qDebug() << "model dir:: " << log_file_model_test;
+
 
 }
 
@@ -898,3 +903,19 @@ void Delay_MSec(unsigned int msec)
     QTimer::singleShot(msec, &loop, SLOT(quit()));//创建单次定时器，槽函数为事件循环的退出函数
     loop.exec();//事件循环开始执行，程序会卡在这里，直到定时时间到，本循环被退出
 }
+
+QString ReadCfg(QString strFileName)
+{
+    QSettings *configIniRead = new QSettings(strFileName, QSettings::IniFormat);
+
+    QString exit_factory = configIniRead->value("/FACTORY_CFG/exit_factroy").toString();
+
+    if (exit_factory.isEmpty()) {
+        configIniRead->setValue("/FACTORY_CFG/exit_factroy", "1");
+    }
+
+    delete configIniRead;
+
+    return exit_factory;
+}
+
